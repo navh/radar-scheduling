@@ -33,7 +33,7 @@
 	When adding a task to this location results in a conflict, a multitask is assembled until it can be inserted without conflict.
 	Multitask assembly is compared to implementations of four existing algorithms in eight loading scenarios.
 	Multitask assembly produces schedules among the lowest cost of simulated methods, at a runtime among the fastest.
-	A python framework is made available for future work.
+	A Python framework is made available for future work.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -80,7 +80,7 @@ This results in a computational time of $\mathcal{O}(K \times n)$ for $K$ varian
 \section{Simulations}
 
 The following algorithms have been scripted and run.
-These simulations, and data used to produce these figures, are available at TODO.
+These simulations, and data used to produce these figures, are available at this \href{https://github.com/navh/radar-scheduling/tree/main/data}{github repository}.
 \subsection{Earliest Start Time}
 
 Tasks are ordered by start time and scheduled start-to-end.
@@ -157,6 +157,7 @@ The following figure shows the state of the candidates and the schedule for 4 ta
 The top candidate is attempted to be added to the schedule every iteration.
 
 \tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
+
 
 \begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
 	%uncomment if require: \path (0,575); %set diagram left start at 0, and has height of 575
@@ -238,7 +239,7 @@ The top candidate is attempted to be added to the schedule every iteration.
 	%Shape: Rectangle [id:dp6738365307392589] 
 	\draw   (10,430) -- (320,430) -- (320,450) -- (10,450) -- cycle ;
 	%Straight Lines [id:da3710215711861885] 
-	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (130,418.5) -- (190,418.5)(130,421.5) -- (190,421.5) ;
+	\draw  [dash pattern={on 0.75pt off 0.75pt}]  (130,418.5) .. controls (131.67,416.83) and (133.33,416.83) .. (135,418.5) .. controls (136.67,420.17) and (138.33,420.17) .. (140,418.5) .. controls (141.67,416.83) and (143.33,416.83) .. (145,418.5) .. controls (146.67,420.17) and (148.33,420.17) .. (150,418.5) .. controls (151.67,416.83) and (153.33,416.83) .. (155,418.5) .. controls (156.67,420.17) and (158.33,420.17) .. (160,418.5) .. controls (161.67,416.83) and (163.33,416.83) .. (165,418.5) .. controls (166.67,420.17) and (168.33,420.17) .. (170,418.5) .. controls (171.67,416.83) and (173.33,416.83) .. (175,418.5) .. controls (176.67,420.17) and (178.33,420.17) .. (180,418.5) .. controls (181.67,416.83) and (183.33,416.83) .. (185,418.5) .. controls (186.67,420.17) and (188.33,420.17) .. (190,418.5) -- (190,418.5)(130,421.5) .. controls (131.67,419.83) and (133.33,419.83) .. (135,421.5) .. controls (136.67,423.17) and (138.33,423.17) .. (140,421.5) .. controls (141.67,419.83) and (143.33,419.83) .. (145,421.5) .. controls (146.67,423.17) and (148.33,423.17) .. (150,421.5) .. controls (151.67,419.83) and (153.33,419.83) .. (155,421.5) .. controls (156.67,423.17) and (158.33,423.17) .. (160,421.5) .. controls (161.67,419.83) and (163.33,419.83) .. (165,421.5) .. controls (166.67,423.17) and (168.33,423.17) .. (170,421.5) .. controls (171.67,419.83) and (173.33,419.83) .. (175,421.5) .. controls (176.67,423.17) and (178.33,423.17) .. (180,421.5) .. controls (181.67,419.83) and (183.33,419.83) .. (185,421.5) .. controls (186.67,423.17) and (188.33,423.17) .. (190,421.5) -- (190,421.5) ;
 	%Shape: Rectangle [id:dp45205317902744446] 
 	\draw   (10,400) -- (320,400) -- (320,430) -- (10,430) -- cycle ;
 	%Straight Lines [id:da32052157053530683] 
@@ -308,9 +309,7 @@ The top candidate is attempted to be added to the schedule every iteration.
 	\draw (21,82) node [anchor=north west][inner sep=0.75pt]   [align=left] {1};
 
 
-
 \end{tikzpicture}
-
 
 \section{Results}
 
@@ -435,18 +434,19 @@ The computer employed includes the 1st generation Apple M1 Pro 10 Core, 16 GB RA
 \section{Takeaways}
 
 There is no framing of this problem that can be solved with a single pass.
-Choosing heuristics is difficult, my intuitions were frequently violated, and I do not fully understand the actual mechanism by which certain design decisions improve performance.
+Choosing heuristics is difficult, and intuition was frequently violated.
+he actual mechanism by which certain decisions improve performance remains elusive.
 
 \subsection{Ignore Idle Time Insertion}
 
-I had convinced myself that one of the advantages of \emph{Dual Side Scheduling} was that it served as a roundabout way to run RSST with various idle times inserted at the start.
-Based on this assumption I made some of the key design decisions when putting together \emph{Multitask Assembly Scheduling}.
-I had imagined that the ability to insert more idle times more carefully between scheduled tasks would dramatically improve upon existing algorithms.
-I predicted that this would be most impactful in periods of light underloading.
+Convinced that one of the advantages of \emph{Dual Side Scheduling} was that it served as a roundabout way to run RSST with various idle times inserted at the start.
+Based on this, key design decisions were made when putting together \emph{Multitask Assembly Scheduling}.
+The view was that the ability to insert more idle times with greater intention between scheduled tasks would improve upon existing algorithms.
+In particular, that idle time insertions would be most impactful under light underloading.
 
-The reality was the opposite of my intuition, \emph{Multitask Assembly} performed worse in light underloading scenarios, and performs better in higher loading scenarios where it produces a gap-free schedule indistinguishable from a `front-to-back' approach.
-After bolting on many additional features, the end result is a needlessly complex dwell time by priority algorithm.
-Slightly more care taken to not prematurely drop tasks does provide some benefit, but could easily be added to any of the other algorithms.
+The reality was the opposite, \emph{Multitask Assembly} performed worse in light underloading scenarios, and performs better in higher loading scenarios where it produces a gap-free schedule indistinguishable from a `front-to-back' approach.
+After bolting on many additional heuristics, the result is a needlessly complex dwell time ratio algorithm.
+More care taken to not prematurely drop tasks does provide some benefit, but could easily be added to any of the other algorithms.
 
 \subsection{Experimental Design}
 
@@ -483,13 +483,16 @@ the underlying `single-pass' design decision limits the upper bound of performan
 
 There are far simpler scheduling problems which remain unsolved, and the extreme time constraints in the radar environment mean that some heuristic-based approach must be employed.
 It is simple to generate billions of scenarios, at least when simply selecting randomly from totally flat distributions.
-I understand now why using a reinforcement learning algorithm to develop a more exotic heuristic paired with tree search is an attractive direction for future work.
+Using a reinforcement learning algorithm to develop a more exotic heuristic paired with tree search is an attractive direction for future work.
 
 \subsection{Python Sandbox}
 
-The most valuable artifact of this work is the python framework developed which allows for quick iterations of scheduling algorithm ideas in the context of radar tasks.
+\href{https://github.com/navh/radar-scheduling/tree/main/}{https://github.com/navh/radar-scheduling/tree/main/}
+
+The most valuable artifact of this work is the Python framework developed which allows for quick iterations of scheduling algorithm ideas in the context of radar tasks.
 Defining tasks and schedules allows for scheduling code to be written much closer to plain-text description.
 It should be helpful not just for evaluating existing known algorithms and developing new ones, but also for integrating with reinforcement learning libraries in the future.
+
 
 %\section*{Acknowledgment}
 
