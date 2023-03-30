@@ -230,19 +230,20 @@ def counter():
 if __name__ == "__main__":
     run_settings = list()
     count = counter()
-    SAMPLES = 1_000_000
-    for i in range(1, 1 + SAMPLES):
-        run_settings.append(
-            SampleSettings(
-                sample_number=next(count),
-                itr_rsst=1000,
-                itr_rsst_dualside=50,
-                total_borders=10,
-                n_actual=10,
-                window_length=1,
-                tau=1,
+    for _ in range(1000):
+        SAMPLES = 150
+        for i in range(1, 1 + SAMPLES):
+            run_settings.append(
+                SampleSettings(
+                    sample_number=next(count),
+                    itr_rsst=100,
+                    itr_rsst_dualside=10,
+                    total_borders=10,
+                    n_actual=i,
+                    window_length=1,
+                    tau=1,
+                )
             )
-        )
 
     samples = list()
     with Pool(os.cpu_count()) as pool:
@@ -255,4 +256,4 @@ if __name__ == "__main__":
         ):
             samples.extend(sample.__dict__ for sample in subsamples)
 
-    pd.DataFrame(samples).to_parquet("./data/test7.parquet", index=False)
+    pd.DataFrame(samples).to_parquet("./data/n_task_sweep2.parquet", index=False)
