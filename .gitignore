@@ -1,0 +1,22 @@
+
+# general things to ignore
+.DS_Store
+build/
+dist/
+venv/
+*.egg-info/
+*.egg
+*.py[cod]
+__pycache__/
+*.so
+*~
+
+# due to using tox and pytest
+.tox
+.cache
+
+# ignore generated scenarios
+eight_scenarios/*
+data/*
+!data/test1m1krsst.parquet
+!data/n_task_sweep2.parquet

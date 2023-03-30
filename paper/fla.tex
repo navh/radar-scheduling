@@ -1,0 +1,499 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xfrac}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgf}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Radar Scheduling Method based on Iterative Assembly of Movable Multitasks
+	\thanks{This work was supported by the Defence Research and Development Canada Ottawa Research Centre. Ottawa, Ontario, K1A 0Z4, Canada}
+}
+
+\author{\IEEEauthorblockN{Amos Hebb}
+	\IEEEauthorblockA{
+		a.hebb@mail.utoronto.ca}
+}
+
+\maketitle
+
+\begin{abstract}
+	A radar task scheduling method, multitask assembly, is proposed in this paper.
+	In this method, tasks are ordered according to some priority function.
+	Tasks from this ordering are iteratively added to a schedule at the lowest cost location.
+	When adding a task to this location results in a conflict, a multitask is assembled until it can be inserted without conflict.
+	Multitask assembly is compared to implementations of four existing algorithms in eight loading scenarios.
+	Multitask assembly produces schedules among the lowest cost of simulated methods, at a runtime among the fastest.
+	A python framework is made available for future work.
+\end{abstract}
+
+\begin{IEEEkeywords}
+	multi-function radar, radar resource management, task scheduling
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+Phased array radars are responsible for multiple functions, and each function produces multiple tasks to be processed.
+A radar task is described by its zero cost start time $t_{start}$, dwell time $t_{dwell}$, bounds $t_{earliest}$ and $t_{latest}$, and task priority $p$.
+In a multi-function radar system, radar resource management includes task prioritization, task selection, and task scheduling.
+One objective is to arrange radar tasks into a schedulable sequence without overlaps to be executed.
+The computational runtime of this scheduling algorithm is particularly important, as in application hundreds of radar tasks need to be scheduled in tenths of a second.
+
+A scheduling method takes a set of tasks and either assigns these tasks times or drops them to create a conflict-free schedule.
+Performance can be evaluated by the total cost $J$, drop-rate $\gamma$, or computational time $T$ to determine the solution.
+This is an NP-hard problem.
+For this reason, this paper focuses on heuristic scheduling methods which do not aim to find a global optimum, but instead, a good schedule in a reasonable runtime.
+
+\section{Problem Formulation}
+
+The problem is a variant of the single-machine weighted earliness-tardiness scheduling problem with dropping tasks and inserting idle space.
+A scheduling method is applied to a set of tasks producing a set of tasks with a $t_{scheduled}$.
+$t_{scheduled}$ contains either a time such that all tasks can be executed conflict-free when started at $t_{scheduled}$, or a marker indicating that the task has been dropped.
+The objective is to select $t_{scheduled}$ to minimize the total weighted earliness-tardiness and weighted drop penalty of all tasks.
+
+\begin{equation}
+	J = \begin{cases}
+		(p \times 10)^2                                       & \mathrm{if}~t_{scheduled} = \mathrm{dropped,} \\
+		p \times (\frac{(t_{start} - t_{scheduled})}{\tau})^2 & \mathrm{otherwise.}
+	\end{cases}
+\end{equation}
+
+\section{Existing Algorithms}
+
+%\subsection{All Gas No Brakes}
+Methods like \emph{Earliest start time}, and \emph{Earliest deadline} are computationally fast, around $\mathcal{O}(n)$, but produce schedules with a high cost and drop-rate (low $T$, high $J$, $\gamma$).
+
+%\subsection{Shake and Bake}
+Methods like \emph{Random shifted start time} and \emph{Dual Side Scheduling} combine a computationally fast
+$\mathcal{O}(n)$ function like earliest-start-time with a source of variance, produce and evaluate some number $K$ variants, and select the lowest cost schedule among these variants.
+
+This results in a computational time of $\mathcal{O}(K \times n)$ for $K$ variants. (medium $T$, medium $J$, $\gamma$)
+\section{Simulations}
+
+The following algorithms have been scripted and run.
+These simulations, and data used to produce these figures, are available at TODO.
+\subsection{Earliest Start Time}
+
+Tasks are ordered by start time and scheduled start-to-end.
+Once the window is full, the remaining tasks are dropped.
+
+\subsection{Priority Scheduling}
+
+Tasks are ordered by priority and scheduled start-to-end.
+Once the window is full, the remaining tasks are dropped.
+
+\subsection{Dwell Time Priority Scheduling}
+
+Tasks are ordered by dwell time divided by priority squared and scheduled start-to-end.
+Once the window is full, the remaining tasks are dropped.
+
+\subsection{Random Shifted Start Time}
+
+Tasks are randomly ordered and scheduled start-to-end.
+This is repeated for a fixed number of shuffles.
+The cost of each shuffle is evaluated.
+The lowest-cost shuffle is selected.
+
+\subsection{Dual Side Scheduling}
+
+A fixed number of evenly spaced times within the window are selected as borders.
+For each border, tasks with a mean time less than the border are ordered by task end time and scheduled border-to-left.
+Tasks with a mean time greater than the border are ordered by start time and scheduled border-to-right.
+Once the window is full, the remaining tasks are dropped.
+
+\subsection{Dual Side Scheduling with Random Shifted Start Times}
+
+Tasks are shuffled a fixed number of times, for each shuffle, \emph{Dual Side Scheduling} is applied.
+
+\section{Multitask Assembly}
+
+The main idea behind multitask assembly is that schedules without conflicts are trivial.
+Solving a conflict between only two tasks is usually quite obvious.
+Two conflicting tasks will have one task either coming before or after the other task with no gap between them.
+By only ever inserting one task at a time and treating sequential tasks with no gaps between them as individual tasks a schedule can be produced.
+
+\subsection{Multitask}
+
+A multitask is conceptually identical to a single task.
+It has a $t_{start}$ describing the lowest cost starting time and $t_{dwell}$ describing the duration.
+A multitask contains an ordered list of tasks, the first task will be scheduled at $t_{scheduled}$, with each subsequent task starting as soon as the preceding task completes.
+The $t_{scheduled}$ of a multitask is the $t_{scheduled}$ of its first task, and $t_{dwell} = \sum_{task}^{tasks}t_{dwell}$ is the dwell time of all tasks.
+
+\subsection{Task Selection}
+
+Tasks are first ordered by $\frac{t_{dwell}}{p^2}$, which is the Dwell-Priority Ratio from \cite{poster}, and the highest priority task is always added next.
+Once a task has been added to a schedule, it may be moved in time, but it will not be dropped.
+
+\subsection{Decision Loop}
+
+While diverging slightly from implementation, at a high level the algorithm works as follows.
+
+\begin{algorithmic}[1]
+	\STATE {tasks $\gets$ all unscheduled tasks}
+	\STATE {schedule $\gets \{\} $}
+	\STATE {dropped $\gets \{\}$}
+	\WHILE{tasks $\neq \{\}$}
+	\STATE {dropped $\gets $ tasks with $t_{dwell}$ $>$ remaining window}
+	\STATE {$t$ $\gets$ best task from tasks}
+	\IF {$t_{dwell}$ conflict free with schedule}
+	\STATE {schedule $\gets t$}
+	\ELSE
+	\STATE{conflict $\gets$ a conflicting task from schedule}
+	\ENDIF
+	\ENDWHILE
+\end{algorithmic}
+
+Stepping through various iterations gives a better intuition for how this algorithm schedules tasks.
+The following figure shows the state of the candidates and the schedule for 4 tasks.
+The top candidate is attempted to be added to the schedule every iteration.
+
+\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
+
+\begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
+	%uncomment if require: \path (0,575); %set diagram left start at 0, and has height of 575
+
+	%Shape: Rectangle [id:dp6527168068501658] 
+	\draw   (10,80) -- (320,80) -- (320,110) -- (10,110) -- cycle ;
+	%Up Arrow [id:dp11957045894257734] 
+	\draw   (20,52) -- (35,40) -- (50,52) -- (42.5,52) -- (42.5,70) -- (27.5,70) -- (27.5,52) -- cycle ;
+	%Straight Lines [id:da1929472713457665] 
+	\draw    (80,58.5) -- (110,58.5)(80,61.5) -- (110,61.5) ;
+	%Straight Lines [id:da8367977886368451] 
+	\draw    (130,68.5) .. controls (131.67,66.83) and (133.33,66.83) .. (135,68.5) .. controls (136.67,70.17) and (138.33,70.17) .. (140,68.5) .. controls (141.67,66.83) and (143.33,66.83) .. (145,68.5) .. controls (146.67,70.17) and (148.33,70.17) .. (150,68.5) .. controls (151.67,66.83) and (153.33,66.83) .. (155,68.5) .. controls (156.67,70.17) and (158.33,70.17) .. (160,68.5) .. controls (161.67,66.83) and (163.33,66.83) .. (165,68.5) .. controls (166.67,70.17) and (168.33,70.17) .. (170,68.5) .. controls (171.67,66.83) and (173.33,66.83) .. (175,68.5) .. controls (176.67,70.17) and (178.33,70.17) .. (180,68.5) .. controls (181.67,66.83) and (183.33,66.83) .. (185,68.5) .. controls (186.67,70.17) and (188.33,70.17) .. (190,68.5) -- (190,68.5)(130,71.5) .. controls (131.67,69.83) and (133.33,69.83) .. (135,71.5) .. controls (136.67,73.17) and (138.33,73.17) .. (140,71.5) .. controls (141.67,69.83) and (143.33,69.83) .. (145,71.5) .. controls (146.67,73.17) and (148.33,73.17) .. (150,71.5) .. controls (151.67,69.83) and (153.33,69.83) .. (155,71.5) .. controls (156.67,73.17) and (158.33,73.17) .. (160,71.5) .. controls (161.67,69.83) and (163.33,69.83) .. (165,71.5) .. controls (166.67,73.17) and (168.33,73.17) .. (170,71.5) .. controls (171.67,69.83) and (173.33,69.83) .. (175,71.5) .. controls (176.67,73.17) and (178.33,73.17) .. (180,71.5) .. controls (181.67,69.83) and (183.33,69.83) .. (185,71.5) .. controls (186.67,73.17) and (188.33,73.17) .. (190,71.5) -- (190,71.5) ;
+	%Straight Lines [id:da19759883382450194] 
+	\draw    (90,40) -- (140,40) ;
+	%Straight Lines [id:da4962453859744608] 
+	\draw    (180,50) .. controls (181.67,48.33) and (183.33,48.33) .. (185,50) .. controls (186.67,51.67) and (188.33,51.67) .. (190,50) .. controls (191.67,48.33) and (193.33,48.33) .. (195,50) .. controls (196.67,51.67) and (198.33,51.67) .. (200,50) .. controls (201.67,48.33) and (203.33,48.33) .. (205,50) .. controls (206.67,51.67) and (208.33,51.67) .. (210,50) .. controls (211.67,48.33) and (213.33,48.33) .. (215,50) .. controls (216.67,51.67) and (218.33,51.67) .. (220,50) .. controls (221.67,48.33) and (223.33,48.33) .. (225,50) .. controls (226.67,51.67) and (228.33,51.67) .. (230,50) .. controls (231.67,48.33) and (233.33,48.33) .. (235,50) .. controls (236.67,51.67) and (238.33,51.67) .. (240,50) .. controls (241.67,48.33) and (243.33,48.33) .. (245,50) .. controls (246.67,51.67) and (248.33,51.67) .. (250,50) -- (250,50) ;
+	%Shape: Rectangle [id:dp8569694391517747] 
+	\draw   (10,30) -- (320,30) -- (320,80) -- (10,80) -- cycle ;
+	%Shape: Rectangle [id:dp4193696788264648] 
+	\draw   (10,170) -- (320,170) -- (320,190) -- (10,190) -- cycle ;
+	%Straight Lines [id:da2739676836608925] 
+	\draw    (80,148.5) -- (110,148.5)(80,151.5) -- (110,151.5) ;
+	%Straight Lines [id:da021303988818623498] 
+	\draw    (130,158.5) .. controls (131.67,156.83) and (133.33,156.83) .. (135,158.5) .. controls (136.67,160.17) and (138.33,160.17) .. (140,158.5) .. controls (141.67,156.83) and (143.33,156.83) .. (145,158.5) .. controls (146.67,160.17) and (148.33,160.17) .. (150,158.5) .. controls (151.67,156.83) and (153.33,156.83) .. (155,158.5) .. controls (156.67,160.17) and (158.33,160.17) .. (160,158.5) .. controls (161.67,156.83) and (163.33,156.83) .. (165,158.5) .. controls (166.67,160.17) and (168.33,160.17) .. (170,158.5) .. controls (171.67,156.83) and (173.33,156.83) .. (175,158.5) .. controls (176.67,160.17) and (178.33,160.17) .. (180,158.5) .. controls (181.67,156.83) and (183.33,156.83) .. (185,158.5) .. controls (186.67,160.17) and (188.33,160.17) .. (190,158.5) -- (190,158.5)(130,161.5) .. controls (131.67,159.83) and (133.33,159.83) .. (135,161.5) .. controls (136.67,163.17) and (138.33,163.17) .. (140,161.5) .. controls (141.67,159.83) and (143.33,159.83) .. (145,161.5) .. controls (146.67,163.17) and (148.33,163.17) .. (150,161.5) .. controls (151.67,159.83) and (153.33,159.83) .. (155,161.5) .. controls (156.67,163.17) and (158.33,163.17) .. (160,161.5) .. controls (161.67,159.83) and (163.33,159.83) .. (165,161.5) .. controls (166.67,163.17) and (168.33,163.17) .. (170,161.5) .. controls (171.67,159.83) and (173.33,159.83) .. (175,161.5) .. controls (176.67,163.17) and (178.33,163.17) .. (180,161.5) .. controls (181.67,159.83) and (183.33,159.83) .. (185,161.5) .. controls (186.67,163.17) and (188.33,163.17) .. (190,161.5) -- (190,161.5) ;
+	%Straight Lines [id:da6578661848380516] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (90,130) -- (140,130) ;
+	%Straight Lines [id:da9461753027501232] 
+	\draw    (180,140) .. controls (181.67,138.33) and (183.33,138.33) .. (185,140) .. controls (186.67,141.67) and (188.33,141.67) .. (190,140) .. controls (191.67,138.33) and (193.33,138.33) .. (195,140) .. controls (196.67,141.67) and (198.33,141.67) .. (200,140) .. controls (201.67,138.33) and (203.33,138.33) .. (205,140) .. controls (206.67,141.67) and (208.33,141.67) .. (210,140) .. controls (211.67,138.33) and (213.33,138.33) .. (215,140) .. controls (216.67,141.67) and (218.33,141.67) .. (220,140) .. controls (221.67,138.33) and (223.33,138.33) .. (225,140) .. controls (226.67,141.67) and (228.33,141.67) .. (230,140) .. controls (231.67,138.33) and (233.33,138.33) .. (235,140) .. controls (236.67,141.67) and (238.33,141.67) .. (240,140) .. controls (241.67,138.33) and (243.33,138.33) .. (245,140) .. controls (246.67,141.67) and (248.33,141.67) .. (250,140) -- (250,140) ;
+	%Shape: Rectangle [id:dp7113004819452066] 
+	\draw   (10,120) -- (320,120) -- (320,170) -- (10,170) -- cycle ;
+	%Straight Lines [id:da3076860525690155] 
+	\draw    (90,180) -- (140,180) ;
+	%Shape: Rectangle [id:dp8760409631625592] 
+	\draw   (10,240) -- (320,240) -- (320,260) -- (10,260) -- cycle ;
+	%Straight Lines [id:da02947780379610654] 
+	\draw    (80,218.5) -- (110,218.5)(80,221.5) -- (110,221.5) ;
+	%Straight Lines [id:da8653418984846262] 
+	\draw    (130,228.5) .. controls (131.67,226.83) and (133.33,226.83) .. (135,228.5) .. controls (136.67,230.17) and (138.33,230.17) .. (140,228.5) .. controls (141.67,226.83) and (143.33,226.83) .. (145,228.5) .. controls (146.67,230.17) and (148.33,230.17) .. (150,228.5) .. controls (151.67,226.83) and (153.33,226.83) .. (155,228.5) .. controls (156.67,230.17) and (158.33,230.17) .. (160,228.5) .. controls (161.67,226.83) and (163.33,226.83) .. (165,228.5) .. controls (166.67,230.17) and (168.33,230.17) .. (170,228.5) .. controls (171.67,226.83) and (173.33,226.83) .. (175,228.5) .. controls (176.67,230.17) and (178.33,230.17) .. (180,228.5) .. controls (181.67,226.83) and (183.33,226.83) .. (185,228.5) .. controls (186.67,230.17) and (188.33,230.17) .. (190,228.5) -- (190,228.5)(130,231.5) .. controls (131.67,229.83) and (133.33,229.83) .. (135,231.5) .. controls (136.67,233.17) and (138.33,233.17) .. (140,231.5) .. controls (141.67,229.83) and (143.33,229.83) .. (145,231.5) .. controls (146.67,233.17) and (148.33,233.17) .. (150,231.5) .. controls (151.67,229.83) and (153.33,229.83) .. (155,231.5) .. controls (156.67,233.17) and (158.33,233.17) .. (160,231.5) .. controls (161.67,229.83) and (163.33,229.83) .. (165,231.5) .. controls (166.67,233.17) and (168.33,233.17) .. (170,231.5) .. controls (171.67,229.83) and (173.33,229.83) .. (175,231.5) .. controls (176.67,233.17) and (178.33,233.17) .. (180,231.5) .. controls (181.67,229.83) and (183.33,229.83) .. (185,231.5) .. controls (186.67,233.17) and (188.33,233.17) .. (190,231.5) -- (190,231.5) ;
+	%Straight Lines [id:da7712877577692664] 
+	\draw  [dash pattern={on 0.75pt off 0.75pt}]  (180,210) .. controls (181.67,208.33) and (183.33,208.33) .. (185,210) .. controls (186.67,211.67) and (188.33,211.67) .. (190,210) .. controls (191.67,208.33) and (193.33,208.33) .. (195,210) .. controls (196.67,211.67) and (198.33,211.67) .. (200,210) .. controls (201.67,208.33) and (203.33,208.33) .. (205,210) .. controls (206.67,211.67) and (208.33,211.67) .. (210,210) .. controls (211.67,208.33) and (213.33,208.33) .. (215,210) .. controls (216.67,211.67) and (218.33,211.67) .. (220,210) .. controls (221.67,208.33) and (223.33,208.33) .. (225,210) .. controls (226.67,211.67) and (228.33,211.67) .. (230,210) .. controls (231.67,208.33) and (233.33,208.33) .. (235,210) .. controls (236.67,211.67) and (238.33,211.67) .. (240,210) .. controls (241.67,208.33) and (243.33,208.33) .. (245,210) .. controls (246.67,211.67) and (248.33,211.67) .. (250,210) -- (250,210) ;
+	%Shape: Rectangle [id:dp4591362706584956] 
+	\draw   (10,200) -- (320,200) -- (320,240) -- (10,240) -- cycle ;
+	%Straight Lines [id:da9786913121123978] 
+	\draw    (90,250) -- (140,250) ;
+	%Straight Lines [id:da3208800177569602] 
+	\draw    (180,250) .. controls (181.67,248.33) and (183.33,248.33) .. (185,250) .. controls (186.67,251.67) and (188.33,251.67) .. (190,250) .. controls (191.67,248.33) and (193.33,248.33) .. (195,250) .. controls (196.67,251.67) and (198.33,251.67) .. (200,250) .. controls (201.67,248.33) and (203.33,248.33) .. (205,250) .. controls (206.67,251.67) and (208.33,251.67) .. (210,250) .. controls (211.67,248.33) and (213.33,248.33) .. (215,250) .. controls (216.67,251.67) and (218.33,251.67) .. (220,250) .. controls (221.67,248.33) and (223.33,248.33) .. (225,250) .. controls (226.67,251.67) and (228.33,251.67) .. (230,250) .. controls (231.67,248.33) and (233.33,248.33) .. (235,250) .. controls (236.67,251.67) and (238.33,251.67) .. (240,250) .. controls (241.67,248.33) and (243.33,248.33) .. (245,250) .. controls (246.67,251.67) and (248.33,251.67) .. (250,250) -- (250,250) ;
+	%Shape: Rectangle [id:dp6350297977576445] 
+	\draw   (10,310) -- (320,310) -- (320,330) -- (10,330) -- cycle ;
+	%Straight Lines [id:da4406100162539395] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (80,288.5) -- (110,288.5)(80,291.5) -- (110,291.5) ;
+	%Straight Lines [id:da8930324125937183] 
+	\draw    (130,298.5) .. controls (131.67,296.83) and (133.33,296.83) .. (135,298.5) .. controls (136.67,300.17) and (138.33,300.17) .. (140,298.5) .. controls (141.67,296.83) and (143.33,296.83) .. (145,298.5) .. controls (146.67,300.17) and (148.33,300.17) .. (150,298.5) .. controls (151.67,296.83) and (153.33,296.83) .. (155,298.5) .. controls (156.67,300.17) and (158.33,300.17) .. (160,298.5) .. controls (161.67,296.83) and (163.33,296.83) .. (165,298.5) .. controls (166.67,300.17) and (168.33,300.17) .. (170,298.5) .. controls (171.67,296.83) and (173.33,296.83) .. (175,298.5) .. controls (176.67,300.17) and (178.33,300.17) .. (180,298.5) .. controls (181.67,296.83) and (183.33,296.83) .. (185,298.5) .. controls (186.67,300.17) and (188.33,300.17) .. (190,298.5) -- (190,298.5)(130,301.5) .. controls (131.67,299.83) and (133.33,299.83) .. (135,301.5) .. controls (136.67,303.17) and (138.33,303.17) .. (140,301.5) .. controls (141.67,299.83) and (143.33,299.83) .. (145,301.5) .. controls (146.67,303.17) and (148.33,303.17) .. (150,301.5) .. controls (151.67,299.83) and (153.33,299.83) .. (155,301.5) .. controls (156.67,303.17) and (158.33,303.17) .. (160,301.5) .. controls (161.67,299.83) and (163.33,299.83) .. (165,301.5) .. controls (166.67,303.17) and (168.33,303.17) .. (170,301.5) .. controls (171.67,299.83) and (173.33,299.83) .. (175,301.5) .. controls (176.67,303.17) and (178.33,303.17) .. (180,301.5) .. controls (181.67,299.83) and (183.33,299.83) .. (185,301.5) .. controls (186.67,303.17) and (188.33,303.17) .. (190,301.5) -- (190,301.5) ;
+	%Shape: Rectangle [id:dp3270526386772594] 
+	\draw   (10,270) -- (320,270) -- (320,310) -- (10,310) -- cycle ;
+	%Straight Lines [id:da5039534633727593] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (90,320) -- (140,320) ;
+	%Straight Lines [id:da553517094795145] 
+	\draw    (180,320) .. controls (181.67,318.33) and (183.33,318.33) .. (185,320) .. controls (186.67,321.67) and (188.33,321.67) .. (190,320) .. controls (191.67,318.33) and (193.33,318.33) .. (195,320) .. controls (196.67,321.67) and (198.33,321.67) .. (200,320) .. controls (201.67,318.33) and (203.33,318.33) .. (205,320) .. controls (206.67,321.67) and (208.33,321.67) .. (210,320) .. controls (211.67,318.33) and (213.33,318.33) .. (215,320) .. controls (216.67,321.67) and (218.33,321.67) .. (220,320) .. controls (221.67,318.33) and (223.33,318.33) .. (225,320) .. controls (226.67,321.67) and (228.33,321.67) .. (230,320) .. controls (231.67,318.33) and (233.33,318.33) .. (235,320) .. controls (236.67,321.67) and (238.33,321.67) .. (240,320) .. controls (241.67,318.33) and (243.33,318.33) .. (245,320) .. controls (246.67,321.67) and (248.33,321.67) .. (250,320) -- (250,320) ;
+	%Straight Lines [id:da38527335942243146] 
+	\draw    (70,278.5) -- (100,278.5)(70,281.5) -- (100,281.5) ;
+	%Straight Lines [id:da7408274526140632] 
+	\draw    (100,280) -- (150,280) ;
+	%Shape: Rectangle [id:dp36918700476297217] 
+	\draw   (10,370) -- (320,370) -- (320,390) -- (10,390) -- cycle ;
+	%Straight Lines [id:da05235051192114404] 
+	\draw    (130,358.5) .. controls (131.67,356.83) and (133.33,356.83) .. (135,358.5) .. controls (136.67,360.17) and (138.33,360.17) .. (140,358.5) .. controls (141.67,356.83) and (143.33,356.83) .. (145,358.5) .. controls (146.67,360.17) and (148.33,360.17) .. (150,358.5) .. controls (151.67,356.83) and (153.33,356.83) .. (155,358.5) .. controls (156.67,360.17) and (158.33,360.17) .. (160,358.5) .. controls (161.67,356.83) and (163.33,356.83) .. (165,358.5) .. controls (166.67,360.17) and (168.33,360.17) .. (170,358.5) .. controls (171.67,356.83) and (173.33,356.83) .. (175,358.5) .. controls (176.67,360.17) and (178.33,360.17) .. (180,358.5) .. controls (181.67,356.83) and (183.33,356.83) .. (185,358.5) .. controls (186.67,360.17) and (188.33,360.17) .. (190,358.5) -- (190,358.5)(130,361.5) .. controls (131.67,359.83) and (133.33,359.83) .. (135,361.5) .. controls (136.67,363.17) and (138.33,363.17) .. (140,361.5) .. controls (141.67,359.83) and (143.33,359.83) .. (145,361.5) .. controls (146.67,363.17) and (148.33,363.17) .. (150,361.5) .. controls (151.67,359.83) and (153.33,359.83) .. (155,361.5) .. controls (156.67,363.17) and (158.33,363.17) .. (160,361.5) .. controls (161.67,359.83) and (163.33,359.83) .. (165,361.5) .. controls (166.67,363.17) and (168.33,363.17) .. (170,361.5) .. controls (171.67,359.83) and (173.33,359.83) .. (175,361.5) .. controls (176.67,363.17) and (178.33,363.17) .. (180,361.5) .. controls (181.67,359.83) and (183.33,359.83) .. (185,361.5) .. controls (186.67,363.17) and (188.33,363.17) .. (190,361.5) -- (190,361.5) ;
+	%Shape: Rectangle [id:dp46707022785071517] 
+	\draw   (10,340) -- (320,340) -- (320,370) -- (10,370) -- cycle ;
+	%Straight Lines [id:da10760519019166659] 
+	\draw    (180,380) .. controls (181.67,378.33) and (183.33,378.33) .. (185,380) .. controls (186.67,381.67) and (188.33,381.67) .. (190,380) .. controls (191.67,378.33) and (193.33,378.33) .. (195,380) .. controls (196.67,381.67) and (198.33,381.67) .. (200,380) .. controls (201.67,378.33) and (203.33,378.33) .. (205,380) .. controls (206.67,381.67) and (208.33,381.67) .. (210,380) .. controls (211.67,378.33) and (213.33,378.33) .. (215,380) .. controls (216.67,381.67) and (218.33,381.67) .. (220,380) .. controls (221.67,378.33) and (223.33,378.33) .. (225,380) .. controls (226.67,381.67) and (228.33,381.67) .. (230,380) .. controls (231.67,378.33) and (233.33,378.33) .. (235,380) .. controls (236.67,381.67) and (238.33,381.67) .. (240,380) .. controls (241.67,378.33) and (243.33,378.33) .. (245,380) .. controls (246.67,381.67) and (248.33,381.67) .. (250,380) -- (250,380) ;
+	%Straight Lines [id:da13542577401793865] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (70,348.5) -- (100,348.5)(70,351.5) -- (100,351.5) ;
+	%Straight Lines [id:da02246914492255625] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (100,350) -- (150,350) ;
+	%Straight Lines [id:da6341850509985018] 
+	\draw    (70,378.5) -- (100,378.5)(70,381.5) -- (100,381.5) ;
+	%Straight Lines [id:da43769009219565214] 
+	\draw    (100,380) -- (150,380) ;
+	%Shape: Rectangle [id:dp6738365307392589] 
+	\draw   (10,430) -- (320,430) -- (320,450) -- (10,450) -- cycle ;
+	%Straight Lines [id:da3710215711861885] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (130,418.5) -- (190,418.5)(130,421.5) -- (190,421.5) ;
+	%Shape: Rectangle [id:dp45205317902744446] 
+	\draw   (10,400) -- (320,400) -- (320,430) -- (10,430) -- cycle ;
+	%Straight Lines [id:da32052157053530683] 
+	\draw    (180,440) .. controls (181.67,438.33) and (183.33,438.33) .. (185,440) .. controls (186.67,441.67) and (188.33,441.67) .. (190,440) .. controls (191.67,438.33) and (193.33,438.33) .. (195,440) .. controls (196.67,441.67) and (198.33,441.67) .. (200,440) .. controls (201.67,438.33) and (203.33,438.33) .. (205,440) .. controls (206.67,441.67) and (208.33,441.67) .. (210,440) .. controls (211.67,438.33) and (213.33,438.33) .. (215,440) .. controls (216.67,441.67) and (218.33,441.67) .. (220,440) .. controls (221.67,438.33) and (223.33,438.33) .. (225,440) .. controls (226.67,441.67) and (228.33,441.67) .. (230,440) .. controls (231.67,438.33) and (233.33,438.33) .. (235,440) .. controls (236.67,441.67) and (238.33,441.67) .. (240,440) .. controls (241.67,438.33) and (243.33,438.33) .. (245,440) .. controls (246.67,441.67) and (248.33,441.67) .. (250,440) -- (250,440) ;
+	%Straight Lines [id:da527346973420537] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (70,438.5) -- (100,438.5)(70,441.5) -- (100,441.5) ;
+	%Straight Lines [id:da011138280282336321] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (100,440) -- (150,440) ;
+	%Straight Lines [id:da8106833947351959] 
+	\draw    (140,408.5) .. controls (141.67,406.83) and (143.33,406.83) .. (145,408.5) .. controls (146.67,410.17) and (148.33,410.17) .. (150,408.5) .. controls (151.67,406.83) and (153.33,406.83) .. (155,408.5) .. controls (156.67,410.17) and (158.33,410.17) .. (160,408.5) .. controls (161.67,406.83) and (163.33,406.83) .. (165,408.5) .. controls (166.67,410.17) and (168.33,410.17) .. (170,408.5) .. controls (171.67,406.83) and (173.33,406.83) .. (175,408.5) .. controls (176.67,410.17) and (178.33,410.17) .. (180,408.5) .. controls (181.67,406.83) and (183.33,406.83) .. (185,408.5) .. controls (186.67,410.17) and (188.33,410.17) .. (190,408.5) .. controls (191.67,406.83) and (193.33,406.83) .. (195,408.5) .. controls (196.67,410.17) and (198.33,410.17) .. (200,408.5) -- (200,408.5)(140,411.5) .. controls (141.67,409.83) and (143.33,409.83) .. (145,411.5) .. controls (146.67,413.17) and (148.33,413.17) .. (150,411.5) .. controls (151.67,409.83) and (153.33,409.83) .. (155,411.5) .. controls (156.67,413.17) and (158.33,413.17) .. (160,411.5) .. controls (161.67,409.83) and (163.33,409.83) .. (165,411.5) .. controls (166.67,413.17) and (168.33,413.17) .. (170,411.5) .. controls (171.67,409.83) and (173.33,409.83) .. (175,411.5) .. controls (176.67,413.17) and (178.33,413.17) .. (180,411.5) .. controls (181.67,409.83) and (183.33,409.83) .. (185,411.5) .. controls (186.67,413.17) and (188.33,413.17) .. (190,411.5) .. controls (191.67,409.83) and (193.33,409.83) .. (195,411.5) .. controls (196.67,413.17) and (198.33,413.17) .. (200,411.5) -- (200,411.5) ;
+	%Straight Lines [id:da22427526319468394] 
+	\draw    (60,408.5) -- (90,408.5)(60,411.5) -- (90,411.5) ;
+	%Straight Lines [id:da9494438740813146] 
+	\draw    (90,410) -- (140,410) ;
+	%Shape: Rectangle [id:dp9717042657278326] 
+	\draw   (10,490) -- (320,490) -- (320,510) -- (10,510) -- cycle ;
+	%Shape: Rectangle [id:dp5373504320459221] 
+	\draw   (10,460) -- (320,460) -- (320,490) -- (10,490) -- cycle ;
+	%Straight Lines [id:da08514564504338473] 
+	\draw  [dash pattern={on 0.75pt off 0.75pt}]  (180,500) .. controls (181.67,498.33) and (183.33,498.33) .. (185,500) .. controls (186.67,501.67) and (188.33,501.67) .. (190,500) .. controls (191.67,498.33) and (193.33,498.33) .. (195,500) .. controls (196.67,501.67) and (198.33,501.67) .. (200,500) .. controls (201.67,498.33) and (203.33,498.33) .. (205,500) .. controls (206.67,501.67) and (208.33,501.67) .. (210,500) .. controls (211.67,498.33) and (213.33,498.33) .. (215,500) .. controls (216.67,501.67) and (218.33,501.67) .. (220,500) .. controls (221.67,498.33) and (223.33,498.33) .. (225,500) .. controls (226.67,501.67) and (228.33,501.67) .. (230,500) .. controls (231.67,498.33) and (233.33,498.33) .. (235,500) .. controls (236.67,501.67) and (238.33,501.67) .. (240,500) .. controls (241.67,498.33) and (243.33,498.33) .. (245,500) .. controls (246.67,501.67) and (248.33,501.67) .. (250,500) -- (250,500) ;
+	%Straight Lines [id:da6747731604437972] 
+	\draw    (130,468.5) .. controls (131.67,466.83) and (133.33,466.83) .. (135,468.5) .. controls (136.67,470.17) and (138.33,470.17) .. (140,468.5) .. controls (141.67,466.83) and (143.33,466.83) .. (145,468.5) .. controls (146.67,470.17) and (148.33,470.17) .. (150,468.5) .. controls (151.67,466.83) and (153.33,466.83) .. (155,468.5) .. controls (156.67,470.17) and (158.33,470.17) .. (160,468.5) .. controls (161.67,466.83) and (163.33,466.83) .. (165,468.5) .. controls (166.67,470.17) and (168.33,470.17) .. (170,468.5) .. controls (171.67,466.83) and (173.33,466.83) .. (175,468.5) .. controls (176.67,470.17) and (178.33,470.17) .. (180,468.5) .. controls (181.67,466.83) and (183.33,466.83) .. (185,468.5) .. controls (186.67,470.17) and (188.33,470.17) .. (190,468.5) -- (190,468.5)(130,471.5) .. controls (131.67,469.83) and (133.33,469.83) .. (135,471.5) .. controls (136.67,473.17) and (138.33,473.17) .. (140,471.5) .. controls (141.67,469.83) and (143.33,469.83) .. (145,471.5) .. controls (146.67,473.17) and (148.33,473.17) .. (150,471.5) .. controls (151.67,469.83) and (153.33,469.83) .. (155,471.5) .. controls (156.67,473.17) and (158.33,473.17) .. (160,471.5) .. controls (161.67,469.83) and (163.33,469.83) .. (165,471.5) .. controls (166.67,473.17) and (168.33,473.17) .. (170,471.5) .. controls (171.67,469.83) and (173.33,469.83) .. (175,471.5) .. controls (176.67,473.17) and (178.33,473.17) .. (180,471.5) .. controls (181.67,469.83) and (183.33,469.83) .. (185,471.5) .. controls (186.67,473.17) and (188.33,473.17) .. (190,471.5) -- (190,471.5) ;
+	%Straight Lines [id:da7061404685670062] 
+	\draw    (50,468.5) -- (80,468.5)(50,471.5) -- (80,471.5) ;
+	%Straight Lines [id:da9614907180957198] 
+	\draw    (80,470) -- (130,470) ;
+	%Straight Lines [id:da8521083828814657] 
+	\draw  [dash pattern={on 0.75pt off 0.75pt}]  (140,478.5) .. controls (141.67,476.83) and (143.33,476.83) .. (145,478.5) .. controls (146.67,480.17) and (148.33,480.17) .. (150,478.5) .. controls (151.67,476.83) and (153.33,476.83) .. (155,478.5) .. controls (156.67,480.17) and (158.33,480.17) .. (160,478.5) .. controls (161.67,476.83) and (163.33,476.83) .. (165,478.5) .. controls (166.67,480.17) and (168.33,480.17) .. (170,478.5) .. controls (171.67,476.83) and (173.33,476.83) .. (175,478.5) .. controls (176.67,480.17) and (178.33,480.17) .. (180,478.5) .. controls (181.67,476.83) and (183.33,476.83) .. (185,478.5) .. controls (186.67,480.17) and (188.33,480.17) .. (190,478.5) .. controls (191.67,476.83) and (193.33,476.83) .. (195,478.5) .. controls (196.67,480.17) and (198.33,480.17) .. (200,478.5) -- (200,478.5)(140,481.5) .. controls (141.67,479.83) and (143.33,479.83) .. (145,481.5) .. controls (146.67,483.17) and (148.33,483.17) .. (150,481.5) .. controls (151.67,479.83) and (153.33,479.83) .. (155,481.5) .. controls (156.67,483.17) and (158.33,483.17) .. (160,481.5) .. controls (161.67,479.83) and (163.33,479.83) .. (165,481.5) .. controls (166.67,483.17) and (168.33,483.17) .. (170,481.5) .. controls (171.67,479.83) and (173.33,479.83) .. (175,481.5) .. controls (176.67,483.17) and (178.33,483.17) .. (180,481.5) .. controls (181.67,479.83) and (183.33,479.83) .. (185,481.5) .. controls (186.67,483.17) and (188.33,483.17) .. (190,481.5) .. controls (191.67,479.83) and (193.33,479.83) .. (195,481.5) .. controls (196.67,483.17) and (198.33,483.17) .. (200,481.5) -- (200,481.5) ;
+	%Straight Lines [id:da6039811861659838] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (60,478.5) -- (90,478.5)(60,481.5) -- (90,481.5) ;
+	%Straight Lines [id:da6069713248643466] 
+	\draw  [dash pattern={on 0.84pt off 2.51pt}]  (90,480) -- (140,480) ;
+	%Straight Lines [id:da5965384953372769] 
+	\draw    (190,470) .. controls (191.67,468.33) and (193.33,468.33) .. (195,470) .. controls (196.67,471.67) and (198.33,471.67) .. (200,470) .. controls (201.67,468.33) and (203.33,468.33) .. (205,470) .. controls (206.67,471.67) and (208.33,471.67) .. (210,470) .. controls (211.67,468.33) and (213.33,468.33) .. (215,470) .. controls (216.67,471.67) and (218.33,471.67) .. (220,470) .. controls (221.67,468.33) and (223.33,468.33) .. (225,470) .. controls (226.67,471.67) and (228.33,471.67) .. (230,470) .. controls (231.67,468.33) and (233.33,468.33) .. (235,470) .. controls (236.67,471.67) and (238.33,471.67) .. (240,470) .. controls (241.67,468.33) and (243.33,468.33) .. (245,470) .. controls (246.67,471.67) and (248.33,471.67) .. (250,470) .. controls (251.67,468.33) and (253.33,468.33) .. (255,470) .. controls (256.67,471.67) and (258.33,471.67) .. (260,470) -- (260,470) ;
+	%Shape: Rectangle [id:dp7443391417360029] 
+	\draw   (10,520) -- (320,520) -- (320,540) -- (10,540) -- cycle ;
+	%Straight Lines [id:da7065917661028417] 
+	\draw    (130,528.5) .. controls (131.67,526.83) and (133.33,526.83) .. (135,528.5) .. controls (136.67,530.17) and (138.33,530.17) .. (140,528.5) .. controls (141.67,526.83) and (143.33,526.83) .. (145,528.5) .. controls (146.67,530.17) and (148.33,530.17) .. (150,528.5) .. controls (151.67,526.83) and (153.33,526.83) .. (155,528.5) .. controls (156.67,530.17) and (158.33,530.17) .. (160,528.5) .. controls (161.67,526.83) and (163.33,526.83) .. (165,528.5) .. controls (166.67,530.17) and (168.33,530.17) .. (170,528.5) .. controls (171.67,526.83) and (173.33,526.83) .. (175,528.5) .. controls (176.67,530.17) and (178.33,530.17) .. (180,528.5) .. controls (181.67,526.83) and (183.33,526.83) .. (185,528.5) .. controls (186.67,530.17) and (188.33,530.17) .. (190,528.5) -- (190,528.5)(130,531.5) .. controls (131.67,529.83) and (133.33,529.83) .. (135,531.5) .. controls (136.67,533.17) and (138.33,533.17) .. (140,531.5) .. controls (141.67,529.83) and (143.33,529.83) .. (145,531.5) .. controls (146.67,533.17) and (148.33,533.17) .. (150,531.5) .. controls (151.67,529.83) and (153.33,529.83) .. (155,531.5) .. controls (156.67,533.17) and (158.33,533.17) .. (160,531.5) .. controls (161.67,529.83) and (163.33,529.83) .. (165,531.5) .. controls (166.67,533.17) and (168.33,533.17) .. (170,531.5) .. controls (171.67,529.83) and (173.33,529.83) .. (175,531.5) .. controls (176.67,533.17) and (178.33,533.17) .. (180,531.5) .. controls (181.67,529.83) and (183.33,529.83) .. (185,531.5) .. controls (186.67,533.17) and (188.33,533.17) .. (190,531.5) -- (190,531.5) ;
+	%Straight Lines [id:da4328200547083666] 
+	\draw    (50,528.5) -- (80,528.5)(50,531.5) -- (80,531.5) ;
+	%Straight Lines [id:da45444658123822923] 
+	\draw    (80,530) -- (130,530) ;
+	%Straight Lines [id:da22829885836811004] 
+	\draw    (190,530) .. controls (191.67,528.33) and (193.33,528.33) .. (195,530) .. controls (196.67,531.67) and (198.33,531.67) .. (200,530) .. controls (201.67,528.33) and (203.33,528.33) .. (205,530) .. controls (206.67,531.67) and (208.33,531.67) .. (210,530) .. controls (211.67,528.33) and (213.33,528.33) .. (215,530) .. controls (216.67,531.67) and (218.33,531.67) .. (220,530) .. controls (221.67,528.33) and (223.33,528.33) .. (225,530) .. controls (226.67,531.67) and (228.33,531.67) .. (230,530) .. controls (231.67,528.33) and (233.33,528.33) .. (235,530) .. controls (236.67,531.67) and (238.33,531.67) .. (240,530) .. controls (241.67,528.33) and (243.33,528.33) .. (245,530) .. controls (246.67,531.67) and (248.33,531.67) .. (250,530) .. controls (251.67,528.33) and (253.33,528.33) .. (255,530) .. controls (256.67,531.67) and (258.33,531.67) .. (260,530) -- (260,530) ;
+
+	% Text Node
+	\draw (31,52.4) node [anchor=north west][inner sep=0.75pt]    {$p$};
+	% Text Node
+	\draw (254,82) node [anchor=north west][inner sep=0.75pt]   [align=left] {Schedule};
+	% Text Node
+	\draw (241,61) node [anchor=north west][inner sep=0.75pt]   [align=left] {Candidates};
+	% Text Node
+	\draw (21,151) node [anchor=north west][inner sep=0.75pt]   [align=left] {2};
+	% Text Node
+	\draw (21,221) node [anchor=north west][inner sep=0.75pt]   [align=left] {3};
+	% Text Node
+	\draw (21,291) node [anchor=north west][inner sep=0.75pt]   [align=left] {4};
+	% Text Node
+	\draw (21,351) node [anchor=north west][inner sep=0.75pt]   [align=left] {5};
+	% Text Node
+	\draw (21,411) node [anchor=north west][inner sep=0.75pt]   [align=left] {6};
+	% Text Node
+	\draw (21,471) node [anchor=north west][inner sep=0.75pt]   [align=left] {7};
+	% Text Node
+	\draw (21,521) node [anchor=north west][inner sep=0.75pt]   [align=left] {8};
+	% Text Node
+	\draw (21,82) node [anchor=north west][inner sep=0.75pt]   [align=left] {1};
+
+
+
+\end{tikzpicture}
+
+
+\section{Results}
+
+Unless otherwise specified, the following figures were produced with a run of 1 million 10-task scenarios.
+\emph{Random Shifted Start Time} is configured to run for 1000 iterations.
+\emph{Dual Side Scheduling} runs 100 RSS iterations with 10 borders.
+These are based on the results presented in \cite{dss_2020}, using 100 RSS iterations instead of 50 to keep $K$ at 1000 for both.
+
+\subsection{Overloaded Cost}
+
+
+\begin{figure}[h]
+	\centering
+	{\input{figs/overload5.pgf}}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	{\input{figs/overload3.pgf}}
+\end{figure}
+
+In the overloaded scenarios, \emph{Earliest Start Time} and \emph{Earliest Deadline} have a much higher normalized cost than the other three algorithms.
+
+A plot showing \emph{Random Shifted Start Times}, \emph{Dual Side Scheduling}, and \emph{Multitask Assembly} show how, especially when giving the iterative algorithms many iterations, the performance is very similar.
+While there are regions where one appears to do better than another, these are not consistent between runs.
+The main takeaway should be that for overloading scenarios \emph{Multitask Assembly} produces schedules with costs similar to \emph{Random Shifted Start Time} and \emph{Dual Side Scheduling}.
+
+\subsection{Underloaded Cost}
+
+\begin{figure}[h]
+	\centering
+	{\input{figs/underload5.pgf}}
+\end{figure}
+
+Underloaded scenarios present an even more interesting set of tradeoffs.
+\emph{Earliest Start Time}, \emph{Earliest Deadline}, and \emph{Multitask Assembly} have a deterministic order in which tasks will be scheduled.
+When the loading rate is exactly 1 \emph{Multitask Assembly Scheduling} will produce a single full-window-sized multitask sorted by earliest start time, resulting in a schedule identical to \emph{Earliest Start Time}.
+This multitask may not start at 0 if this reduces cost. This is why for near 1 loading rate, \emph{Multitask Assembly} and \emph{Earliest Start Time} converge.
+
+\emph{Random Shifted Start Time} is able to shuffle the sequence of tasks, it appears that simply sampling 1000 random schedules and starting at 0 produces the lowest cost schedules with loading rates from 90\% to 100\%.
+\emph{Dual Side Scheduling with Random Shifted Start Time} evaluates fewer random shuffles, and therefore is not as lucky, but is also capable of starting its sequence at points other than 0.
+This is clearly a beneficial combination, making it the best choice from about 70\% to 90\%, nearly as performant as \emph{Random Shifted Start Times} right to 100\%.
+
+The ability to insert multiple idle periods and keep tasks with no conflicts exactly at their 0 cost $t_{start}$ sounds powerful, but is not valuable until below 60\% loading.
+In underloaded situations, the ability to evaluate multiple schedule orders is more valuable than inserting idle space most schedules.
+
+\subsection{Droprate}
+
+\begin{figure}[h]
+	\centering
+	{\input{figs/droprate.pgf}}
+\end{figure}
+
+Only \emph{Dual Side Scheduling} is capable of dropping tasks below a 100\% loading rate when $\tau = 1$. With priorities being integers 1-9 and drop penalty of 1, it does so sometimes during the period where it produces the lowest cost schedules.
+
+All algorithms have tightly coupled mean drop rates. \emph{Multitask Assembly} is consistently among the lowest, mostly explained by prioritizing shorter tasks and putting them into the schedule first.
+
+\subsection{Computational Time}
+
+\begin{figure}[h]
+	\centering
+	{\input{figs/comptime5.pgf}}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	{\input{figs/comptime3.pgf}}
+\end{figure}
+
+\emph{Dual Side Scheduling} and \emph{Random Shifted Start Time} take about 80ms to complete 1000 iterations, about 1000 times longer than the 0.08ms it takes to run \emph{Earliest Deadline} and \emph{Earliest Start Time}.
+\emph{Multitask Assembly} takes slightly under twice as long as these algorithms with only 10 tasks. The current implementation has a worst-case runtime of $\mathcal{O}(n^2)$, but does start dropping tasks once it knows they are no longer schedulable.
+To test the impact of this potentially quadratic runtime against these otherwise fairly linear algorithms, 1000 samples were run on schedules with 1 through 100 tasks.
+To give them a fighting chance, \emph{Random Shifted Start Time} is configured to only check 100 iterations, and \emph{Dual Side Scheduling} only does 10 shuffles with 10 borders each.
+
+\begin{figure}[h]
+	\centering
+	{\input{figs/comptimesweep.pgf}}
+\end{figure}
+
+We can see that the worst case is not realized, as at 100 tasks an $n^2$ should be equal to $K \times n$ when $K = 100$.
+This plot shows slow quadratic growth at a rate that leaves it below 5 milliseconds for 100 tasks.
+
+\subsection{8 Scenarios}
+
+The states from \cite{modified_q_learn} have been rearranged to the following order.
+Mean results for each method in each scenario are compared to the performance of \emph{Earliest Start Time}.
+
+\begin{enumerate}
+	\item $ \Sigma t_{dwell} \ge L $ \& $ \bar{t}_{start} \le 0.5 $ \& $ \Sigma $ conflict $ \le 10$
+	\item $ \Sigma t_{dwell} \ge L $ \& $ \bar{t}_{start} \le 0.5 $ \& $ \Sigma $ conflict $ > 10$
+	\item $ \Sigma t_{dwell} \ge L $ \& $ \bar{t}_{start} > 0.5 $ \& $ \Sigma $ conflict $ \le 10$
+	\item $ \Sigma t_{dwell} \ge L $ \& $ \bar{t}_{start} > 0.5 $ \& $ \Sigma $ conflict $ > 10$
+	\item $ \Sigma t_{dwell} < L $ \& $ \bar{t}_{start} \ge 0.5 $ \& $ \Sigma $ conflict $ \le 10$
+	\item $ \Sigma t_{dwell} < L $ \& $ \bar{t}_{start} \ge 0.5 $ \& $ \Sigma $ conflict $ > 10$
+	\item $ \Sigma t_{dwell} < L $ \& $ \bar{t}_{start} > 0.5 $ \& $ \Sigma $ conflict $ \le 10$
+	\item $ \Sigma t_{dwell} < L $ \& $ \bar{t}_{start} > 0.5 $ \& $ \Sigma $ conflict $ > 10$
+\end{enumerate}
+
+\begin{table}[h]
+	\begin{tabular}{lrrrrr}
+		\hline
+		\textbf{State} & \textbf{EST} & \textbf{ED} & \textbf{RSST} & \textbf{DSS} & \textbf{FLA} \\\hline
+		1              & 1.0          & 1.076093    & 0.365978      & 0.359640     & 0.373556     \\
+		2              & 1.0          & 1.031949    & 0.342289      & 0.343085     & 0.369665     \\
+		3              & 1.0          & 1.096770    & 0.352149      & 0.352936     & 0.352667     \\
+		4              & 1.0          & 1.083805    & 0.338597      & 0.346299     & 0.384441     \\
+		5              & 1.0          & 1.190858    & 0.663880      & 0.560949     & 0.720155     \\
+		6              & 1.0          & 1.153737    & 0.586624      & 0.563300     & 0.819483     \\
+		7              & 1.0          & 1.157137    & 0.575815      & 0.443852     & 0.517884     \\
+		8              & 1.0          & 1.188896    & 0.530837      & 0.500677     & 0.805071     \\ \hline
+		\\
+	\end{tabular}
+	\caption{Eight Scenarios Mean Cost Ratio with EST}
+	\label{tab:eight}
+\end{table}
+
+\subsection{Computer}
+
+All the simulations and calculations presented in this paper are conducted by using Python 3.11.2 in a macOS Ventura 13.2.1 environment.
+The computer employed includes the 1st generation Apple M1 Pro 10 Core, 16 GB RAM, and a solid-state drive.
+
+\section{Takeaways}
+
+There is no framing of this problem that can be solved with a single pass.
+Choosing heuristics is difficult, my intuitions were frequently violated, and I do not fully understand the actual mechanism by which certain design decisions improve performance.
+
+\subsection{Ignore Idle Time Insertion}
+
+I had convinced myself that one of the advantages of \emph{Dual Side Scheduling} was that it served as a roundabout way to run RSST with various idle times inserted at the start.
+Based on this assumption I made some of the key design decisions when putting together \emph{Multitask Assembly Scheduling}.
+I had imagined that the ability to insert more idle times more carefully between scheduled tasks would dramatically improve upon existing algorithms.
+I predicted that this would be most impactful in periods of light underloading.
+
+The reality was the opposite of my intuition, \emph{Multitask Assembly} performed worse in light underloading scenarios, and performs better in higher loading scenarios where it produces a gap-free schedule indistinguishable from a `front-to-back' approach.
+After bolting on many additional features, the end result is a needlessly complex dwell time by priority algorithm.
+Slightly more care taken to not prematurely drop tasks does provide some benefit, but could easily be added to any of the other algorithms.
+
+\subsection{Experimental Design}
+
+Smaller iterations on existing algorithms would allow me to more confidently make claims about what worked and what did not work.
+There are at least 3 ideas here.
+First, the idea of iteratively inserting new tasks by evaluating tasks already committed.
+Second, deciding on an order but not a start time for a group of tasks, and then scheduling these as if they are a single task.
+Finally, adding the ability to leave idle time between scheduled tasks.
+
+My intuition based on these results, but mostly my reading about branch-and-bound, is that iterative approaches should be explored further.
+Idle time, despite being so obvious to me, was empirically not as helpful as my intuition tells me it should be.
+The concept of a movable multitask, the main idea I was hoping to explore with this work, is still something I am uncertain about.
+
+A decisive answer could have been produced by doing smaller modifications to existing algorithms and evaluating these ideas on their own.
+Instead, the analysis of these ideas is muddied by the many unjustified heuristics: dwell time priority squared as sorting method, changing priorities from 0.1-0.9 to 1-9, or adding tasks even when it increases cost, sorting sequences by start time, and using a weighted mean as a multitasks desired start time.
+The result is a reasonably performant algorithm which provides fairly little insight into the impact of these decisions on their own.
+
+\subsection{Branch and Bound}
+
+The current best approaches involve breaking the problem into smaller problems, but have abandoned all hope of selecting a single global heuristic that always selects the next best addition to a schedule.
+They instead consider all candidates and estimate the upper and lower bounds of these sub-problems, only discarding hopeless sub-problems.
+This is the most commonly employed approach for solving NP-hard optimization problems.
+Performant solutions are found with both integer linear programming and constraint programming.
+These approaches are still large in both computational and memory complexity, limited mostly by the heuristic used to estimate bounds.
+Industrial engineering research on the one-machine earliness tardiness scheduling problem is most relevant.
+
+\section{Future Work}
+
+This particular algorithm does not warrant further investigation.
+While it is performant and there are many opportunities to further refine by evaluating changes to the many heuristics,
+the underlying `single-pass' design decision limits the upper bound of performance improvements across many scenarios.
+
+\subsection{Reinforcement Learning}
+
+There are far simpler scheduling problems which remain unsolved, and the extreme time constraints in the radar environment mean that some heuristic-based approach must be employed.
+It is simple to generate billions of scenarios, at least when simply selecting randomly from totally flat distributions.
+I understand now why using a reinforcement learning algorithm to develop a more exotic heuristic paired with tree search is an attractive direction for future work.
+
+\subsection{Python Sandbox}
+
+The most valuable artifact of this work is the python framework developed which allows for quick iterations of scheduling algorithm ideas in the context of radar tasks.
+Defining tasks and schedules allows for scheduling code to be written much closer to plain-text description.
+It should be helpful not just for evaluating existing known algorithms and developing new ones, but also for integrating with reinforcement learning libraries in the future.
+
+%\section*{Acknowledgment}
+
+\bibliographystyle{IEEEtran}
+\bibliography{fla}
+
+\end{document}

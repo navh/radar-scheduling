@@ -1,0 +1,54 @@
+ @inproceedings{Qu_Ding_Moo_2019,
+  address   = {Milan, Italy},
+  title     = {A Machine Learning Radar Scheduling Method Based on the EST Algorithm
+               },
+  isbn      = {978-1-72811-419-4},
+  url       = {https://ieeexplore.ieee.org/document/9146101/},
+  doi       = {10.1109/ICCICC46617.2019.9146101},
+  booktitle = {2019 IEEE 18th International Conference on Cognitive Informatics
+               & Cognitive Computing (ICCI*CC)},
+  publisher = {IEEE},
+  author    = {Qu, Zhen and Ding, Zhen and Moo, Peter},
+  year      = {2019},
+  month     = {Jul},
+  pages     = {22–27},
+  language  = {en}
+}
+ @inproceedings{dss_2020,
+  author       = {Qu, Zhen and Ding, Zhen and Moo, Peter},
+  address      = {Warsaw, Pakistan},
+  title        = {Dual-Side Scheduling for Radar Resource Management},
+  isbn         = {978-83-949421-5-1},
+  url          = {https://ieeexplore.ieee.org/document/9253795/},
+  doi          = {10.23919/IRS48640.2020.9253795},
+  abstractnote = {A radar task scheduling method, dual-side scheduling (DSS), is proposed in this paper. In this method, the radar tasks are firstly received as an original sequence, then the time window for the task execution is separated into two sides. All the tasks at each side are shifting toward a separator, connected each other head-to-tail without dwell overlaps. The separator is placed at one of pre-set locations, and the random shifted start time (RSST) technique is applied in order to finalize the scheduling: the start time of each task is randomly shifted in its schedulable interval, then the DSS is respectively conducted at each separator. The RSST process is repeated many times, and the resulting schedule with the minimal cost among all attempts is the final solution. Over a broad range of task loading rate, the proposed method shows 1.5 to 6.2 times less costly than the earliest start time (EST), which is a widely used one-side scheduling method. A full cycle of DSS takes a few tens of milliseconds, short enough for real radar applications.},
+  booktitle    = {2020 21st International Radar Symposium (IRS)},
+  publisher    = {IEEE},
+  year         = {2020},
+  month        = {Oct},
+  pages        = {260–263},
+  language     = {en}
+}
+ @article{modified_q_learn,
+  title        = {A Modified Reinforcement Q-Learning Method for Multi-function Phased Array Radar Beam Scheduling},
+  abstractnote = {Modern multi-function radar is designed to perform a few functions such as guidance, fire control, communications, and surveillance. It needs schedule many tasks with different properties such as start time, dwell time, priority etc. In this type of radar, the radar resource management module makes decisions in task selection and task scheduling, which are NP-hard problems. Many task scheduling algorithms have been proposed, however it is still very challenging to choose the appropriate algorithm in varying environments. In this work, a modified Q-learning (QL) method, is developed to choose the optimal solution. The modified Q-learning (MQL) method is a reinforcement learning using the paradigm of Deep Q-Network. The MQL considers 8 states and 4 actions (scheduling algorithms) which are used to make decisions. The MQL agent is trained and tested for various episode limits ranging from 500 to 300,000. In each episode, tasks are generated randomly, for the training purpose. A cost function is formulated to compare scheduling performance. Our simulation results show that the proposed approach can choose the best algorithm consistently.},
+  author       = {Kosuru, Rahul and Qu, Zhen and Ding, Zhen and Moo, Peter},
+  language     = {en}
+}
+
+ @inproceedings{poster,
+  address      = {Ottawa, ON, Canada},
+  title        = {A Machine Learning Task Selection Method for Radar Resource Management (Poster)},
+  isbn         = {978-0-9964527-8-6},
+  url          = {https://ieeexplore.ieee.org/document/9011342/},
+  doi          = {10.23919/FUSION43075.2019.9011342},
+  abstractnote = {A radar task selection method is proposed through a machine learning approach in order to improve the scheduling performance. The method initially sorts the tasks according to the importance determined by their dwell times and priorities. More important tasks are selected first until the time window for the task execution is full. A set of reward value is defined based on the initial order of the tasks’ importance, then the order of the tasks’ importance is changed iteratively according to an awardpunishment policy in a reinforcement learning process. Finally, the best group of selected tasks is passed to the earliest start time (EST) algorithm for scheduling. By doing so, the performance of the task scheduling is significantly enhanced. The cost of the schedule is about 2.1 to 5.6 times less, under different overloading situations, than the EST. The proposed method is also very time efficient. A full cycle that including the task selection and scheduling only takes less than 15 ms, thus it is practical.},
+  booktitle    = {2019 22th International Conference on Information Fusion (FUSION)},
+  publisher    = {IEEE},
+  author       = {Qu, Zhen and Ding, Zhen and Moo, Peter},
+  year         = {2019},
+  month        = {Jul},
+  pages        = {1–6},
+  language     = {en}
+}
+
