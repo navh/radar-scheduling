@@ -12,6 +12,7 @@ from schedule_earliest_deadline import schedule_earliest_deadline
 from schedule_earliest_start_time import earliest_start_time
 from schedule_front_line_assembly import front_line_assembly
 from schedule_random_shifted_start_time import random_shifted_start_time
+from schedule_dual_side import dual_side
 from summary_stats import summary_stats
 from task import Task
 
@@ -21,7 +22,7 @@ from task import Task
 
 WINDOW_LENGTH = 1
 N = 10
-LOADING_RATE = 50  # 50% underloaded to 200% overloaded
+LOADING_RATE = 200  # 50% underloaded to 200% overloaded
 N_ACTUAL = int(LOADING_RATE * N / 100)  # TODO: should this be ceil? uncast in matlab
 TAU = 1
 ITR_RSST = int(float("1e3"))  # 1e3 to match matlab, could we invest in a couple zeros?
@@ -29,10 +30,10 @@ ITR_RSST = int(float("1e3"))  # 1e3 to match matlab, could we invest in a couple
 
 TOTAL_BORDERS = 10
 BORDER = np.linspace(1 / N, WINDOW_LENGTH - 1 / N, TOTAL_BORDERS)
-ITR_RSST_DUALSIDE = 50
+ITR_RSST_DUALSIDE = 10
 
 # parameters for reinforcement learning scheduling -------------------------------
-ITR_RS_RSST = 150  # total iterations for RL, RSST tryouts
+ITR_RS_RSST = 100  # total iterations for RL, RSST tryouts
 ITR_RL_GD = 30  # total tryouts for  gradient descent
 REWARD_RL = 10  # initial reward value for reinforcement learning
 GOOD_ACTION_REWARD = 1
@@ -122,14 +123,25 @@ summary_stats(rsst_tasks_scheduled, "RSST Scheduling", most_cost)
 # -------------------------------c. Dual-Side Scheduling with RSST (DSS) -----------
 
 tic = time_ns()
-dss_tasks_scheduled = dual_side_with_rsst(
+dss_rsst_tasks_scheduled = dual_side_with_rsst(
     deepcopy(task_list), ITR_RSST, ITR_RSST_DUALSIDE
 )
+
+print(f"Time elapsed for DSS_RSST: {(time_ns()-tic)/1_000_000} ms (DSS)")
+
+pretty_plot(dss_rsst_tasks_scheduled, "DSS_RSST Scheduling", WINDOW_LENGTH)
+summary_stats(dss_rsst_tasks_scheduled, "DSS_RSST Scheduling", most_cost)
+
+# -------------------------------c. Dual-Side Scheduling with RSST (DSS) -----------
+
+tic = time_ns()
+dss_tasks_scheduled = dual_side(deepcopy(task_list), ITR_RSST)
 
 print(f"Time elapsed for DSS: {(time_ns()-tic)/1_000_000} ms (DSS)")
 
 pretty_plot(dss_tasks_scheduled, "DSS Scheduling", WINDOW_LENGTH)
 summary_stats(dss_tasks_scheduled, "DSS Scheduling", most_cost)
+
 
 # d. front line assembly
 
